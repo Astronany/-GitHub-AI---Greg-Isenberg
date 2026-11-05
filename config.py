@@ -1,8 +1,11 @@
-"""Runtime settings for the API test suite.
+"""Runtime settings for the API test suite and the demo app.
 
-Read BASE_URL and API_TOKEN from the environment or a local .env file.
-Blank values fall back to the public JSONPlaceholder demo and no auth,
-so a fresh clone can run without secrets.
+BASE_URL and API_TOKEN come from the environment or a local .env file.
+Blank BASE_URL means "call the in-repo demo app in-process".
+Blank API_TOKEN means the public demo credential, so a fresh clone and
+GitHub Actions can run without secrets.
+
+Shell variables already set in the environment win over .env.
 """
 
 from __future__ import annotations
@@ -15,14 +18,17 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env")
 
-DEFAULT_BASE_URL = "https://jsonplaceholder.typicode.com"
+# Public demo credential. Documented in README and .env.example.
+# Replace it via API_TOKEN when the suite points at a real environment.
+DEFAULT_API_TOKEN = "demo-token"
 
 
-def get_base_url() -> str:
+def get_base_url() -> str | None:
+    """Return the external base URL, or None to use the in-process demo app."""
     value = os.getenv("BASE_URL", "").strip()
-    return (value or DEFAULT_BASE_URL).rstrip("/")
+    return value.rstrip("/") or None
 
 
-def get_api_token() -> str | None:
+def get_api_token() -> str:
     token = os.getenv("API_TOKEN", "").strip()
-    return token or None
+    return token or DEFAULT_API_TOKEN

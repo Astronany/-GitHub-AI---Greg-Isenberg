@@ -1,3 +1,9 @@
+# Test runner
 httpx>=0.28,<1
 pytest>=8.3,<10
+pytest-asyncio>=0.24,<1
 python-dotenv>=1.0,<2
+
+# Demo business API (system under test)
+fastapi>=0.115,<1
+uvicorn>=0.32,<1
