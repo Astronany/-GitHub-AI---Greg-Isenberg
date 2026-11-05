@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: "临时覆盖 BASE_URL；留空则用 Secret 或公开默认地址"
+        description: "临时覆盖 BASE_URL；留空则进程内跑本仓库演示 API（或使用 Secret）"
         required: false
         type: string
   schedule:
-    # 每天 02:00 UTC 跑一次公开默认（或 Secret 中的）环境
+    # 每天 02:00 UTC。未配置 BASE_URL 时在 runner 进程内跑演示 API。
     - cron: "0 2 * * *"
 
 concurrency:
@@ -24,8 +24,10 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     env:
-      # 手动触发时优先用输入；否则用仓库 Secret。两者都空时，测试代码回落到 JSONPlaceholder。
+      # 手动触发时优先用输入；否则用仓库 Secret。两者都空时，pytest 在进程内挂载演示 API。
       BASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_url || secrets.BASE_URL }}
+      # 留空时，演示 API 和测试客户端都使用公开默认值 demo-token。
+      # 配置 Secret 后改为该值，便于以后指向真实环境。
       API_TOKEN: ${{ secrets.API_TOKEN }}
     steps:
       - name: Checkout
@@ -38,8 +40,16 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
-      - name: Install dependencies
+      - name: Install API and test dependencies
         run: pip install -r requirements.txt
+
+      - name: Show test target
+        run: |
+          if [ -n "${BASE_URL}" ]; then
+            echo "Target: external BASE_URL (service must already be reachable)"
+          else
+            echo "Target: in-process demo API (httpx ASGITransport, no extra server)"
+          fi
 
       - name: Run pytest
         run: pytest
